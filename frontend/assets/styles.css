@@ -1,0 +1,24 @@
+
+.img {
+  width: 100%;
+}
+
+.uploader {
+  height: 60px;
+  line-height: 60px;
+  border-width: 1px;
+  border-style: dashed;
+  border-radius: 5px;
+  text-align: center;
+  margin: 10px;
+}
+
+.divInline {
+  display: flex; 
+  flex-direction: row;
+}
+
+.customSpinner {
+  width: 3rem; 
+  height: 3rem;
+}

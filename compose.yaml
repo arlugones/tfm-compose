@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build: ./frontend
+    env_file: ./frontend/.env
+    depends_on:
+      - pgdb
+
+  backend:
+    build: ./backend
+    depends_on:
+      - pgdb
+
+
+  pgdb:
+    image: postgres
+    secrets:

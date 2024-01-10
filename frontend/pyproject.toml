@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "tfm"
+version = "0.3"
+description = ""
+authors = ["Alain Rodriguez <arlugones01@gmail.com>"]
+readme = "README"
+
+[tool.poetry.dependencies]
+python = "~3.10"
+dash = "^2.7.1"
+dash-bootstrap-components = "^1.3.0"
+pandas = "^1.5"
+pyjanitor = "^0.24.0"
+python-dotenv = "^0.21.1"
+dash-loading-spinners = "^1.0.0"
+aiohttp = "^3.8.4"
+psycopg = "^3.1.16"
+sqlalchemy = "^2.0.25"
+dash-ag-grid = "^2.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
