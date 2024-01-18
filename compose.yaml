@@ -1,16 +1,51 @@
 services:
   frontend:
     build: ./frontend
-    env_file: ./frontend/.env
+    ports:
+      - "8080:8050"
+    secrets:
+      - pg-credentials
+    networks: 
+      - front-network
+      - back-network
     depends_on:
       - pgdb
 
   backend:
     build: ./backend
+    ports:
+      - "${BACKEND_PORT}:5000"
+    networks:
+      - back-network
+    secrets:
+      - pg-credentials
     depends_on:
       - pgdb
 
 
   pgdb:
     image: postgres
-    secrets:
+    networks:
+      - back-network
+    environment:
+      - POSTGRES_DB=${DB}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+
+
+secrets:
+  pg-credentials:
+    environment:
+      - "DB"
+      - "DB_USER"
+      - "DB_PASSWORD"
+      - "DB_HOST"
+      - "DB_PORT"
+      - "BACKEND_HOST"
+      - "BACKEND_PORT"
+
+
+networks:
+  front-network: {}
+  
+  back-network: {}
