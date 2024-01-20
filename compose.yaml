@@ -1,6 +1,6 @@
 services:
   frontend:
-    build: ./frontend/docker
+    build: ./frontend
     ports:
       - "8000:80"
     secrets:
@@ -14,7 +14,7 @@ services:
   backend:
     build: ./backend
     ports:
-      - "${BACKEND_PORT}:5000"
+      - "${BACKEND_PORT:-7000}:5000"
     networks:
       - back-network
     secrets:
@@ -28,21 +28,14 @@ services:
     networks:
       - back-network
     environment:
-      - POSTGRES_DB=${DB}
+      - POSTGRES_DB=${DB:-sest}
       - POSTGRES_USER=${DB_USER:-postgres}
       - POSTGRES_PASSWORD=${DB_PASS:-password}
 
 
 secrets:
   pg-credentials:
-    environment:
-      - "DB"
-      - "DB_USER"
-      - "DB_PASS"
-      - "DB_HOST"
-      - "DB_PORT"
-      - "BACKEND_HOST"
-      - "BACKEND_PORT"
+    file: .env
 
 
 networks:
