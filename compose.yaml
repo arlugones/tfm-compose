@@ -2,14 +2,23 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8000:80"
+      - "8000:8000"
     secrets:
       - pg-credentials
     networks: 
       - front-network
       - back-network
+    environment:
+      - DB_USER
+      - DB_PASS
+      - DB_HOST
+      - DB_PORT
+      - DB
+      - BACKEND_PORT
+      - BACKEND_HOST
     depends_on:
       - pgdb
+      - backend
 
   backend:
     build: ./backend
