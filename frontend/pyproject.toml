@@ -17,6 +17,7 @@ aiohttp = "^3.8.4"
 psycopg = "^3.1.16"
 sqlalchemy = "^2.0.25"
 dash-ag-grid = "^2.4.0"
+uvicorn = "^0.25.0"
 
 
 [build-system]
