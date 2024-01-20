@@ -9,19 +9,14 @@ import dash_ag_grid as dag
 from sqlalchemy import create_engine 
 import utils.transforms as transforms
 from utils.asyncquery import APIClient
-from dotenv import find_dotenv, dotenv_values
+# from dotenv import find_dotenv, dotenv_values
 
-config = dotenv_values(find_dotenv())
-# config = dict(os.environ)
+# config = dotenv_values(find_dotenv())
+config = dict(os.environ)
 
 uri = f"postgresql+psycopg://{config['DB_USER']}:{config['DB_PASS']}@{config['DB_HOST']}:{config['DB_PORT']}/{config['DB']}"
 backend_api_url = f"http://{config['BACKEND_HOST']}:{config['BACKEND_PORT']}/calibrar"
 engine = create_engine(uri)
-
-# db = harperdb.HarperDB(
-#     url=os.environ["DB_URL"],
-#     username=os.environ["DB_USER"],
-#     password=os.environ["DB_PASSWORD"])
 
 logo = html.Div([
     html.Img(src='https://via.placeholder.com/1024x100?text=Instituto+Nacional+de+Evaluación+Educativa', className='img')
@@ -115,38 +110,6 @@ app.layout = html.Div([
 def update_submit_button(base_upload, elemental_upload, media_upload, superior_upload, bachillerato_upload):
     return not (base_upload and elemental_upload or base_upload and media_upload or base_upload and superior_upload or base_upload and bachillerato_upload)
 
-# Transforma datos
-# @app.callback(
-#     Output("loading-output", "children"),
-#     Input("base-upload", "contents"),
-#     Input("submit-button", "n_clicks"),
-#     State("elemental-upload", "contents"),
-#     State("media-upload", "contents"),
-#     State("superior-upload", "contents"),
-#     State("bachillerato-upload", "contents"),
-
-# )
-# def update_output(base_contents, nclicks, elemental_contents, media_contents, superior_contents, bachillerato_contents):
-#     if base_contents:
-#         base = transforms.base_processing(base_contents)
-#         return None
-#         # print(base.keys())
-#     else:
-#         raise PreventUpdate
-    
-#     if nclicks:
-#         print(nclicks)
-#         mapa_contenidos = {
-#                 'elemental': elemental_contents, 
-#                 'media': media_contents, 
-#                 'superior': superior_contents, 
-#                 'bachillerato': bachillerato_contents
-#             }
-
-#         mapas = transforms.map_processing(mapa_contenidos)
-#         print(mapas)
-#     else:
-#         raise PreventUpdate
 
 ## Actualiza nombre de uploaders
 @app.callback(
@@ -206,7 +169,8 @@ def update_uploader_text(bachillerato_mapname):
 
 # Procesamiento principal de datos
 @app.callback(
-    [Output('tabs', 'value'), Output('store', 'data')]
+    Output('tabs', 'value'), 
+    Output('store', 'data'),
     Input('submit-button', 'n_clicks'),
     State('na_percent', 'value'),
     State('base-upload', 'filename'),
@@ -255,11 +219,6 @@ def process_base_maps(clicks, na_value, filename, base_content, elemental_conten
             keyboard=False,
             backdrop="static",
         ) 
-            ## TODO falta filtrar cada df para eliminar columnas no utilizadas y casos < umbral
-            # for nombre in nombres_tablas:
-            #     db.create_table(schema, nombre)
-            #     for df in base:
-            #         db.insert(schema, nombre, df.to_dict())
 
         group_list_keys = [
                 'bachillerato_estudios_sociales',
@@ -311,5 +270,5 @@ def update_output(data):
     return dag.AgGrid('grid-table', columnDefs=[{"field": i} for i in df.columns], rowData=df.to_dict(orient='records'))
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
