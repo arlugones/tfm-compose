@@ -2,7 +2,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8000:8000"
+      - "8000:80"
     secrets:
       - pg-credentials
     networks: 
