@@ -89,6 +89,7 @@ second_tab = html.Div([dcc.Tab(
 ), dcc.Store(id='store')])
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.MATERIA])
+server = app.server
 
 app.layout = html.Div([
     logo,
@@ -270,5 +271,5 @@ def update_output(data):
     return dag.AgGrid('grid-table', columnDefs=[{"field": i} for i in df.columns], rowData=df.to_dict(orient='records'))
 
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run_server(debug=False)
