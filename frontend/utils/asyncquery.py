@@ -1,6 +1,5 @@
 import asyncio
 import aiohttp
-import pandas as pd
 
 class APIClient:
     def __init__(self, url):
