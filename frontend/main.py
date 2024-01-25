@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import pandas as pd
@@ -254,7 +255,7 @@ def process_base_maps(clicks, na_value, filename, base_content, elemental_conten
             # Escribiendo en la base de PG
             base[k].to_sql(table_name, con=engine)
 
-            resp = client.process_data(table_name)
+            resp = asyncio.run(client.process_data(table_name))
                
                         
     return 'tab-2', json.dumps(resp)
