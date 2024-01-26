@@ -2,7 +2,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8000:80"
+      - "8080:80"
     secrets:
       - pg-credentials
     networks: 
@@ -22,8 +22,8 @@ services:
 
   backend:
     build: ./backend
-    # ports:
-    #   - "${BACKEND_PORT:-7000}:8000"
+    ports:
+      - "${BACKEND_PORT:-7000}:8000"
     networks:
       - back-network
     secrets:
