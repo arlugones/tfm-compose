@@ -8,7 +8,7 @@ class APIClient:
     async def process_data(self, table_name: str):
         async with aiohttp.ClientSession() as session:
             json_table_name = {'table_name': table_name}
-            async with session.post(self.url, json=json_table_name) as resp:
+            async with session.get(self.url, params=json_table_name) as resp:
                 response = await resp.json()
                 return response
               
