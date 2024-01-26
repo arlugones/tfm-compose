@@ -10,7 +10,7 @@ route <- "./data/"
 
 db <- Sys.getenv('DB')
 user <- Sys.getenv('DB_USER')
-passwd <- Sys.getenv('DB_PASSWORD')
+passwd <- Sys.getenv('DB_PASS')
 host <- Sys.getenv('DB_HOST')
 port <- Sys.getenv('DB_PORT')
 
