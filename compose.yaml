@@ -28,6 +28,12 @@ services:
       - back-network
     secrets:
       - pg-credentials
+    environment:
+      - DB_USER
+      - DB_PASS
+      - DB_HOST
+      - DB_PORT
+      - DB
     depends_on:
       - pgdb
 
