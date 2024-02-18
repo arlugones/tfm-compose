@@ -1,5 +1,8 @@
 FROM python:3.10 as requirements-stage
 
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
 WORKDIR /tmp
 
 RUN pip install poetry
