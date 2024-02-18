@@ -175,14 +175,13 @@ def update_uploader_text(bachillerato_mapname):
     Output('store', 'data'),
     Input('submit-button', 'n_clicks'),
     State('na_percent', 'value'),
-    State('base-upload', 'filename'),
     State('base-upload', 'contents'),
     State('elemental-upload', 'contents'),
     State('media-upload', 'contents'),
     State('superior-upload', 'contents'),
     State('bachillerato-upload', 'contents')
 )
-def process_base_maps(clicks, na_value, filename, base_content, elemental_content, media_content, superior_content, bachillerato_content):
+def process_base_maps(clicks, na_value, base_content, elemental_content, media_content, superior_content, bachillerato_content):
     
     client = APIClient(backend_api_url)
     if clicks is None:
@@ -233,6 +232,7 @@ def process_base_maps(clicks, na_value, filename, base_content, elemental_conten
             }
         
         ## Revisar demora
+        table_list = []
         for k in base.keys():
             df = base[k]
             dfcols = df.columns
@@ -253,9 +253,13 @@ def process_base_maps(clicks, na_value, filename, base_content, elemental_conten
             table_name = k
             
             # Escribiendo en la base de PG
+            table_list.append(table_name)
             base[k].to_sql(table_name, con=engine)
 
-            resp = asyncio.run(client.process_data(table_name))
+        for table in table_list:
+            resp = asyncio.run(client.process_data(table))
+        
+        print(json.dumps(resp))
                
                         
     return 'tab-2', json.dumps(resp)
