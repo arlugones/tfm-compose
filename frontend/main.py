@@ -288,7 +288,7 @@ def process_base_maps(clicks, na_value, base_content, elemental_content, media_c
             resp.append(process_data(backend_api_url, table))
   
                         
-    return 'tab-2', resp, _
+    return 'tab-2', resp
 
 
 @app.callback(
