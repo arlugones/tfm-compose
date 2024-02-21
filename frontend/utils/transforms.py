@@ -5,7 +5,7 @@ import base64
 import io
 import re
 from janitor import clean_names
-import dash_bootstrap_components as dbc
+from sklearn.cluster import KMeans
 
 # Commons
 def parse_contents(contents: str) -> pd.DataFrame:
@@ -97,10 +97,13 @@ def base_processing(base_file: pd.DataFrame) -> Dict[str, pd.DataFrame]:
 
     return _base
 
-# TODO las fechas que se envien a HarperDB deben ser en numero para leerlas correctamente en R
-# TODO tst = datetime.datetime.timestamp(curr_date)
-# TODO datetime.datetime.fromtimestamp(tst)
-
+def clustering(df: pd.DataFrame, n_clusters: int, x: str, y: str) -> pd.DataFrame:
+    df.set_index('id_item', inplace=True)
+    df = df.loc[:, [x, y]]
+    kmeans = KMeans(n_clusters=max(n_clusters, 1))
+    kmeans.fit(df)
+    df['cluster'] = kmeans.labels_
+    return df
 
 if __name__ == "__main__":
     raise ImportError("This module is not meant to be run!")
