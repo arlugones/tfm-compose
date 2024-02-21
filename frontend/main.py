@@ -1,5 +1,4 @@
-import asyncio
-import json
+import urllib
 import os
 import pandas as pd
 from dash.dependencies import Input, Output, State
@@ -7,10 +6,13 @@ from dash import dcc, html, Dash, ctx
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
+import plotly.express as px
+import plotly.graph_objs as go
 from sqlalchemy import create_engine 
 import utils.transforms as transforms
-from utils.asyncquery import APIClient
-# from dotenv import find_dotenv, dotenv_values
+# from utils.asyncquery import APIClient, HttpxAPIClient, process_data
+from utils.syncquery import process_data
+from dotenv import find_dotenv, dotenv_values
 
 # config = dotenv_values(find_dotenv())
 config = dict(os.environ)
@@ -24,47 +26,54 @@ logo = html.Div([
 ])
 
 numeric_input = html.Div([
-    dbc.Col(html.P("Porcentaje de respuestas en blanco para considerar exclusión: "), width="auto"),
+    dbc.Col(html.P("Porcentaje de respuestas en blanco para considerar exclusión: ", style={'margin': '0.5rem'}), width="auto"),
     dbc.Col(dbc.Input(id='na_percent', type="number", min = 0, max = 100, step = 10, value = 30), width="auto")
 ], id="styled-numeric-input", className = 'divInline')
 
 upper_div = html.Div([
     dbc.Card([
-        html.H1('Base de ceros y unos'),
+        html.H1('Base de aciertos de estudiantes', style={'margin': '0.5rem'}),
         dbc.CardBody([
-            dcc.Upload(id = 'base-upload', className = 'uploader', children=html.Div([
-                    'Arrastre aquí o ',
-                    html.A('seleccione un archivo de texto (.csv)')
-                ])),
-                dbc.Spinner(html.Div(id="loading-output"), 
-                            color='primary', spinner_class_name="customSpinner", 
-                            fullscreen=True, fullscreen_style={"background-color": "rgba(0, 0, 0, 0.4)"}),      
+            dcc.Upload(id='base-upload', className='uploader', children=html.Div([
+                'Arrastre aquí o ',
+                html.A('seleccione un archivo de texto (.csv)')
+            ])),
+
         ]),
         numeric_input
-        ], class_name='w-90'
-    ),
+    ], class_name='w-90', style={'margin': '1rem'})
     
     
 ])
 
-lower_div = dbc.Card([
-    dbc.Row(
-                [
-                    html.Div([html.H1('Mapas técnicos')]),
-                ]
-            ),
+lower_div = html.Div([
+    dbc.Card([
+        html.H1('Mapas técnicos', style={'margin': '0.5rem'}),
         dbc.Row([
             dbc.Col([dcc.Upload(id='elemental-upload', className = 'uploader', children=html.Div('Elemental'))]),
         dbc.Col([dcc.Upload(id='media-upload', className = 'uploader', children=html.Div('Media'))]),
         dbc.Col([dcc.Upload(id='superior-upload', className = 'uploader', children=html.Div('Superior'))]),
         dbc.Col([dcc.Upload(id='bachillerato-upload', className = 'uploader', children=html.Div('Bachillerato'))]),
         ])
+    ], style={'margin': '1rem'})
+])
+
+# lower_div = dbc.Card([
+#     dbc.Row(
+#                 [
+#                     html.Div([]),
+#                 ]
+#             ),
+#         dbc.Row([
+#             dbc.Col([dcc.Upload(id='elemental-upload', className = 'uploader', children=html.Div('Elemental'))]),
+#         dbc.Col([dcc.Upload(id='media-upload', className = 'uploader', children=html.Div('Media'))]),
+#         dbc.Col([dcc.Upload(id='superior-upload', className = 'uploader', children=html.Div('Superior'))]),
+#         dbc.Col([dcc.Upload(id='bachillerato-upload', className = 'uploader', children=html.Div('Bachillerato'))]),
+#         ])
             
-        ])
+#         ], style={'margin': '1rem'})
 
-
-
-first_tab = dcc.Tab(
+first_tab = dbc.Tab(
     id='tab-1',
     label='Bases', children=[
             
@@ -76,30 +85,46 @@ first_tab = dcc.Tab(
                 lower_div,
             ),
             dbc.Row(
-                dbc.Col(dbc.Button('Calibrar', id = 'submit-button', color='primary'), width = "auto")
+                dbc.Col(dbc.Button('Calibrar', id = 'submit-button', color='primary'), width = "auto"), style={'margin': '0.5rem'}
             )
             
-        ]
+        ],
+        tab_id='tab-1'
 )
 
-second_tab = html.Div([dcc.Tab(
+second_tab = dbc.Tab(
     id='tab-2',
-    label='Resultados', children=[
+    label='Resultados', 
+    children=[
         html.Div(id='output-div')
-    ]
-), dcc.Store(id='store')])
+    ],
+    tab_id='tab-2'
+)
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.MATERIA])
+third_tab = dbc.Tab(
+    id='tab-3',
+    label='Clustering', 
+    children=[
+        html.Div(id='plot-div')
+    ],
+    tab_id='tab-3'
+)
+
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUMEN], suppress_callback_exceptions=True)
 server = app.server
 
 app.layout = html.Div([
     logo,
-    dcc.Tabs(
+    dbc.Tabs(
         id='tabs', children = [
-        first_tab, second_tab
-    ], value='tab-1'),
+        first_tab, second_tab, third_tab
+    ], active_tab='tab-1'),
+    dbc.Spinner(html.Div(id="loading-output"), 
+                            color='primary', spinner_class_name="customSpinner", 
+                            fullscreen=True, fullscreen_style={"background-color": "rgba(0, 0, 0, 0.4)"}),
+    dcc.Store(id='mystore', storage_type='session')]
     
-])
+)
 
 @app.callback(
     Output('submit-button', 'disabled'),
@@ -171,8 +196,9 @@ def update_uploader_text(bachillerato_mapname):
 
 # Procesamiento principal de datos
 @app.callback(
-    Output('tabs', 'value'), 
-    Output('store', 'data'),
+    Output('tabs', 'active_tab'), 
+    Output('mystore', 'data'),
+    Output('loading-output', 'children'),
     Input('submit-button', 'n_clicks'),
     State('na_percent', 'value'),
     State('base-upload', 'contents'),
@@ -183,7 +209,7 @@ def update_uploader_text(bachillerato_mapname):
 )
 def process_base_maps(clicks, na_value, base_content, elemental_content, media_content, superior_content, bachillerato_content):
     
-    client = APIClient(backend_api_url)
+    # client = HttpxAPIClient(backend_api_url)
     if clicks is None:
         raise PreventUpdate
 
@@ -233,6 +259,7 @@ def process_base_maps(clicks, na_value, base_content, elemental_content, media_c
         
         ## Revisar demora
         table_list = []
+        resp = []
         for k in base.keys():
             df = base[k]
             dfcols = df.columns
@@ -257,24 +284,155 @@ def process_base_maps(clicks, na_value, base_content, elemental_content, media_c
             base[k].to_sql(table_name, con=engine)
 
         for table in table_list:
-            resp = asyncio.run(client.process_data(table))
-        
-        print(json.dumps(resp))
-               
+            # resp = asyncio.run(process_data(backend_api_url, table))
+            resp.append(process_data(backend_api_url, table))
+  
                         
-    return 'tab-2', json.dumps(resp)
-
+    return 'tab-2', resp, _
 
 
 @app.callback(
     Output('output-div', 'children'),
-    Input('store', 'data')
+    Input('mystore', 'data')
 )
-def update_output(data):
-    df = pd.DataFrame(data)
+def update_output(mydata):
+    if mydata is None:
+        raise PreventUpdate
+    else:
+        flat_dict = [dict(**d) for sublist in mydata for d in sublist]
+        df = pd.DataFrame(flat_dict)
     
-    return dag.AgGrid('grid-table', columnDefs=[{"field": i} for i in df.columns], rowData=df.to_dict(orient='records'))
+    return [
+        html.H1('Tabla de resultados de calibración'),
+        dag.AgGrid(
+        id='grid-table', 
+        columnDefs=[{"field": i} for i in df.columns], 
+        rowData=df.to_dict(orient='records'),
+        defaultColDef={"filter": "agTextColumnFilter"},
+        className='ag-theme-material'
+        ),
+        dbc.Button("Descargar CSV", color="success", className="me-1", id="download-button"),
+        ]
 
+@app.callback(
+    Output("download-button", "href"),
+    Input("download-button", "n_clicks"),
+    Input('mystore', 'data')
+)
+def download_csv(n_clicks, mydata):
+    if n_clicks is None:
+        raise PreventUpdate
+    else:
+        flat_dict = [dict(**d) for sublist in mydata for d in sublist]
+        df = pd.DataFrame(flat_dict)
+        csv_string = df.to_csv(sep=';', decimal=',', index=False, encoding='utf-8')
+        csv_string = "data:text/csv;charset=utf-8," + urllib.parse.quote(csv_string.encode('utf-8'))
+        return csv_string
 
-if __name__ == '__main__':
-    app.run_server(debug=False)
+@app.callback(
+    Output('plot-div', 'children'),
+    Input('mystore', 'data')
+)
+def clustering_plot(mydata):
+
+    if mydata is None:
+        raise PreventUpdate
+    else:
+        flat_dict = [dict(**d) for sublist in mydata for d in sublist]
+        df = pd.DataFrame(flat_dict)
+        return [
+            
+            html.Div([
+                dbc.Row(html.H1('Clustering de items calibrados')),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Label('Seleccione grado'),
+                        dcc.Dropdown(
+                            id='campo-dropdown',
+                            options=[{'label': col, 'value': col} for col in df['campo'].unique()],
+                            placeholder='Seleccione grado',
+                            value=df['campo'].unique()[0]
+                        ),
+                        dbc.Label('Seleccione materia'),
+                        dcc.Dropdown(
+                            id='materia-dropdown',
+                            options=[{'label': col, 'value': col} for col in df['materia'].unique()],
+                            placeholder='Seleccione materia',
+                            value=df['materia'].unique()[0]
+                        ),
+                        dbc.Label('Número de clusters'),
+                        dcc.Input(
+                            id='clusters-input',
+                            type='number',
+                            min=3,
+                            value=3
+                        ),
+                        html.Hr(),
+                        dbc.Label('Eje x'),
+                        dcc.Dropdown(
+                            id='x-axis-dropdown',
+                            options=[{'label': col, 'value': col} for col in df.select_dtypes(include=['int64', 'float64']).columns],
+                            placeholder='Seleccione eje x',
+                            value=df.select_dtypes(include=['int64', 'float64']).columns[1]
+                        ),
+                        dbc.Label('Eje y'),
+                        dcc.Dropdown(
+                            id='y-axis-dropdown',
+                            options=[{'label': col, 'value': col} for col in df.select_dtypes(include=['int64', 'float64']).columns],
+                            placeholder='Seleccione eje y',
+                            value=df.select_dtypes(include=['int64', 'float64']).columns[2]
+                        )
+
+                    ], width=4),
+                    dbc.Col([
+                        dcc.Graph(
+                            id='cluster-plot',
+                            figure={}
+                        )
+                    ], width=8)
+                ])
+            ])
+        ]
+
+@app.callback(
+    Output('cluster-plot', 'figure'),
+    Input('campo-dropdown', 'value'),
+    Input('materia-dropdown', 'value'),
+    Input('clusters-input', 'value'),
+    Input('x-axis-dropdown', 'value'),
+    Input('y-axis-dropdown', 'value'),
+    State('mystore', 'data')
+)
+def plot_clusters(campo, materia, clusters, x, y, df):
+    if df is None:
+        raise PreventUpdate
+    else:
+        flat_dict = [dict(**d) for sublist in df for d in sublist]
+        df = pd.DataFrame(flat_dict)
+
+        df = df[(df['campo'] == campo) & (df['materia'] == materia)]
+
+        df = transforms.clustering(df, clusters, x, y).reset_index()
+
+    #     fig = px.scatter(df, x=x, y=y, color='cluster', symbol='cluster', hover_data='id_item')
+    #     fig.update_layout(height=500, width=700)
+    
+    # return fig
+        data = [
+            go.Scatter(
+                x=df.loc[df.cluster == clust, x],
+                y=df.loc[df.cluster == clust, y],
+                mode="markers",
+                marker={"size": 8},
+                name=f"Cluster {clust}",
+                hovertext=df.loc[df.cluster == clust, 'id_item']
+            )
+            for clust in range(clusters)
+        ]
+
+    layout = {"xaxis": {"title": x}, "yaxis": {"title": y}}
+
+    return go.Figure(data=data, layout=layout)
+
+# if __name__ == '__main__':
+#     app.run_server(debug=True, port=8050)
