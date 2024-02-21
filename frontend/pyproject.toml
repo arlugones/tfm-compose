@@ -19,6 +19,8 @@ sqlalchemy = "^2.0.25"
 dash-ag-grid = "^2.4.0"
 uvicorn = "^0.26.0"
 gunicorn = "^21.2.0"
+httpx = "^0.26.0"
+scikit-learn = "^1.4.1.post1"
 
 
 [build-system]
