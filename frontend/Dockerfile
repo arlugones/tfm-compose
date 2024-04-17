@@ -7,7 +7,7 @@ WORKDIR /tmp
 
 RUN pip install poetry
 
-COPY ./pyproject.toml ./poetry.lock* /tmp/
+COPY ./pyproject.toml /tmp/
 
 RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
 
@@ -25,5 +25,4 @@ COPY utils/ ./utils/
 
 EXPOSE 80
 
-# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 CMD ["gunicorn", "-b", "0.0.0.0:80", "-c", "gunicorn_conf.py", "--reload", "main:server"]
