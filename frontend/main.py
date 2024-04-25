@@ -2,7 +2,7 @@ import urllib
 import os
 import pandas as pd
 from dash.dependencies import Input, Output, State
-from dash import dcc, html, Dash, ctx
+from dash import dcc, html, Dash, DiskcacheManager, CeleryManager
 from dash.exceptions import PreventUpdate
 import dash_bootstrap_components as dbc
 import dash_ag_grid as dag
@@ -16,6 +16,22 @@ from dotenv import find_dotenv, dotenv_values
 
 # config = dotenv_values(find_dotenv())
 config = dict(os.environ)
+
+# if 'REDIS_URL' in os.environ:
+#     # Use Redis & Celery if REDIS_URL set as an env variable
+#     from celery import Celery
+#     celery_app = Celery(__name__, broker=os.environ['REDIS_URL'], backend=os.environ['REDIS_URL'])
+#     background_callback_manager = CeleryManager(celery_app)
+
+# else:
+#     # Diskcache for non-production apps when developing locally
+#     import diskcache
+#     cache = diskcache.Cache("./cache")
+#     background_callback_manager = DiskcacheManager(cache)
+
+import diskcache
+cache = diskcache.Cache("./cache")
+background_callback_manager = DiskcacheManager(cache)
 
 uri = f"postgresql+psycopg://{config['DB_USER']}:{config['DB_PASS']}@{config['DB_HOST']}:{config['DB_PORT']}/{config['DB']}"
 backend_api_url = f"http://{config['BACKEND_HOST']}:{config['BACKEND_PORT']}/calibrar"
@@ -58,21 +74,6 @@ lower_div = html.Div([
     ], style={'margin': '1rem'})
 ])
 
-# lower_div = dbc.Card([
-#     dbc.Row(
-#                 [
-#                     html.Div([]),
-#                 ]
-#             ),
-#         dbc.Row([
-#             dbc.Col([dcc.Upload(id='elemental-upload', className = 'uploader', children=html.Div('Elemental'))]),
-#         dbc.Col([dcc.Upload(id='media-upload', className = 'uploader', children=html.Div('Media'))]),
-#         dbc.Col([dcc.Upload(id='superior-upload', className = 'uploader', children=html.Div('Superior'))]),
-#         dbc.Col([dcc.Upload(id='bachillerato-upload', className = 'uploader', children=html.Div('Bachillerato'))]),
-#         ])
-            
-#         ], style={'margin': '1rem'})
-
 first_tab = dbc.Tab(
     id='tab-1',
     label='Bases', children=[
@@ -98,7 +99,8 @@ second_tab = dbc.Tab(
     children=[
         html.Div(id='output-div')
     ],
-    tab_id='tab-2'
+    tab_id='tab-2',
+    style={'margin': '1rem'}
 )
 
 third_tab = dbc.Tab(
@@ -107,10 +109,13 @@ third_tab = dbc.Tab(
     children=[
         html.Div(id='plot-div')
     ],
-    tab_id='tab-3'
+    tab_id='tab-3',
+    style={'margin': '1rem'}
 )
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.LUMEN], suppress_callback_exceptions=True)
+app = Dash(__name__, external_stylesheets=[dbc.themes.LUMEN], 
+           suppress_callback_exceptions=True, title='Calibrador de ítems',
+           update_title='Cargando...',)
 server = app.server
 
 app.layout = html.Div([
@@ -205,7 +210,9 @@ def update_uploader_text(bachillerato_mapname):
     State('elemental-upload', 'contents'),
     State('media-upload', 'contents'),
     State('superior-upload', 'contents'),
-    State('bachillerato-upload', 'contents')
+    State('bachillerato-upload', 'contents'),
+    background=True,
+    manager=background_callback_manager,
 )
 def process_base_maps(clicks, na_value, base_content, elemental_content, media_content, superior_content, bachillerato_content):
     
@@ -288,7 +295,7 @@ def process_base_maps(clicks, na_value, base_content, elemental_content, media_c
             resp.append(process_data(backend_api_url, table))
   
                         
-    return 'tab-2', resp
+    return 'tab-2', resp, None
 
 
 @app.callback(
@@ -305,11 +312,11 @@ def update_output(mydata):
     return [
         html.H1('Tabla de resultados de calibración'),
         dag.AgGrid(
-        id='grid-table', 
-        columnDefs=[{"field": i} for i in df.columns], 
-        rowData=df.to_dict(orient='records'),
-        defaultColDef={"filter": "agTextColumnFilter"},
-        className='ag-theme-material'
+            id='grid-table', 
+            columnDefs=[{"field": i} for i in df.columns], 
+            rowData=df.to_dict(orient='records'),
+            defaultColDef={"filter": "agTextColumnFilter"},
+            className='ag-theme-balham'
         ),
         dbc.Button("Descargar CSV", color="success", className="me-1", id="download-button"),
         ]
@@ -347,36 +354,31 @@ def clustering_plot(mydata):
                 dbc.Row([
                     dbc.Col([
                         dbc.Label('Seleccione grado'),
-                        dcc.Dropdown(
+                        dbc.Select(
                             id='campo-dropdown',
                             options=[{'label': col, 'value': col} for col in df['campo'].unique()],
                             placeholder='Seleccione grado',
                             value=df['campo'].unique()[0]
                         ),
                         dbc.Label('Seleccione materia'),
-                        dcc.Dropdown(
+                        dbc.Select(
                             id='materia-dropdown',
                             options=[{'label': col, 'value': col} for col in df['materia'].unique()],
                             placeholder='Seleccione materia',
                             value=df['materia'].unique()[0]
                         ),
                         dbc.Label('Número de clusters'),
-                        dcc.Input(
-                            id='clusters-input',
-                            type='number',
-                            min=3,
-                            value=3
-                        ),
+                        dbc.Input(id='clusters-input', type="number", min=1, max=10, step=1, value=3),
                         html.Hr(),
                         dbc.Label('Eje x'),
-                        dcc.Dropdown(
+                        dbc.Select(
                             id='x-axis-dropdown',
                             options=[{'label': col, 'value': col} for col in df.select_dtypes(include=['int64', 'float64']).columns],
                             placeholder='Seleccione eje x',
                             value=df.select_dtypes(include=['int64', 'float64']).columns[1]
                         ),
                         dbc.Label('Eje y'),
-                        dcc.Dropdown(
+                        dbc.Select(
                             id='y-axis-dropdown',
                             options=[{'label': col, 'value': col} for col in df.select_dtypes(include=['int64', 'float64']).columns],
                             placeholder='Seleccione eje y',
