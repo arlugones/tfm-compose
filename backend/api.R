@@ -93,6 +93,6 @@ function(req, table_name="") {
   result <- lformato
    
   # TODO debe escribir en la base de resultados y devolver mensaje de fin de proceso
-  # return(toJSON(result))
+  return(result)
 
 }
