@@ -57,5 +57,5 @@ secrets:
 
 networks:
   front-network: {}
-  
+
   back-network: {}
