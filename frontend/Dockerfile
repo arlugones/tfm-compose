@@ -25,4 +25,5 @@ COPY utils/ ./utils/
 
 EXPOSE 80
 
-CMD ["gunicorn", "-b", "0.0.0.0:80", "-c", "gunicorn_conf.py", "--reload", "main:server"]
+# CMD ["gunicorn", "-b", "0.0.0.0:80", "-c", "gunicorn_conf.py", "--reload", "main:server"]
+CMD ["uvicorn", "main:server", "--host", "0.0.0.0", "--port", "80", "--reload"]
